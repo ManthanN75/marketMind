@@ -1,0 +1,8 @@
+requests
+beautifulsoup4
+pandas
+numpy
+textblob
+yfinance
+reportlab
+google-generativeai  # For Gemini Pro API
