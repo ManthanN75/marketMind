@@ -1,3 +1,7 @@
+"""
+ResearchAgent: Scrapes news, press releases, and social media from global sources.
+"""
+
 import requests
 from bs4 import BeautifulSoup
 import google.generativeai as genai
