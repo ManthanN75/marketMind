@@ -1,0 +1,18 @@
+{
+    "company": "Samsung",
+    "ticker": "005930.KS",
+    "current_price": 69700.0,
+    "price_change_percent": 0.14,
+    "market_cap": 458931281330176,
+    "currency": "KRW",
+    "exchange": "KSC",
+    "key_metrics": {
+        "pe_ratio": 12.202558,
+        "dividend_yield": 2.09,
+        "52w_high": 75000.0,
+        "52w_low": 49900.0
+    },
+    "financial_ratios": {},
+    "analysis": "Analysis generation failed",
+    "timestamp": "2025-08-29T20:20:53.651124"
+}
