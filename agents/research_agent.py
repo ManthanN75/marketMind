@@ -101,3 +101,27 @@ class ResearchAgent:
         except Exception as e:
             print(f"Error scraping press releases: {str(e)}")
             return []
+
+    def run(self):
+        """Execute the agent's tasks."""
+        try:
+            news_data = {
+                "company": self.company,
+                "news": self.scrape_news(),
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            # Create data directory if it doesn't exist
+            os.makedirs(self.output_dir, exist_ok=True)
+            
+            # Save to JSON file
+            output_path = os.path.join(self.output_dir, "raw_data.json")
+            with open(output_path, "w") as f:
+                json.dump(news_data, f, indent=4)
+            print(f"News data saved to {output_path}")
+            
+            return news_data
+            
+        except Exception as e:
+            print(f"Error in Research Agent: {str(e)}")
+            return {}
