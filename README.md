@@ -1,12 +1,15 @@
 # MarketMind
 
-An AI-powered market research and analysis tool that helps gather and analyze company information from multiple sources.
+AI-powered market research and analysis tool that gathers and analyzes company information from multiple sources globally.
 
 ## Features
 
-- Research Agent: Scrapes news, press releases, and social media
-- Financial Analyst Agent: Fetches stock data and financials
-- Sentiment Analyst Agent: Analyzes public sentiment and legal risks
+- Research Agent: Global news and press release scraping
+- Financial Analyst: Real-time stock data and financial metrics
+- Sentiment Analyst: News sentiment and legal risk detection
+- Data Analyst: Market trends and competitor analysis
+- Regulatory Analyst: Global compliance monitoring
+- Report Writer: Comprehensive PDF report generation
 
 ## Setup
 
@@ -16,10 +19,10 @@ git clone https://github.com/ManthanN75/marketMind.git
 cd marketMind
 ```
 
-2. Create a virtual environment:
+2. Create virtual environment:
 ```bash
 python -m venv venv
-source venv/Scripts/activate  # Windows
+.\venv\Scripts\activate
 ```
 
 3. Install dependencies:
@@ -27,36 +30,25 @@ source venv/Scripts/activate  # Windows
 pip install -r requirements.txt
 ```
 
-4. Copy `.env.example` to `.env` and add your API keys:
+4. Configure environment:
 ```bash
 cp .env.example .env
+# Edit .env with your API keys
 ```
 
-5. Run the agents:
+5. Run the analysis:
 ```bash
-python agents/research_agent.py
-python agents/financial_analyst_agent.py
-python agents/sentiment_analyst_agent.py
+python main.py
 ```
 
-## Configuration
+## Usage
 
-Create a `.env` file with the following variables:
-- `GEMINI_API_KEY`: Google Gemini API key
-- `TWITTER_API_KEY`: Twitter/X API key
-- `TWITTER_API_SECRET`: Twitter/X API secret
+Enter any publicly traded company name when prompted. Examples:
+- US: Apple, Tesla, Microsoft
+- India: Maruti Suzuki, ITC, Vedanta
+- Global: BMW, Toyota, Samsung
 
-## Project Structure
+## Output
 
-```
-MarketMind/
-├── agents/
-│   ├── research_agent.py
-│   ├── financial_analyst_agent.py
-│   └── sentiment_analyst_agent.py
-├── data/
-├── .env.example
-├── .gitignore
-├── README.md
-└── requirements.txt
-```
+- JSON files in `data/` directory
+- PDF report in `reports/` directory
