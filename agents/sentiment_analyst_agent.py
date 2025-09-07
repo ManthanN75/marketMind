@@ -28,7 +28,7 @@ class SentimentAnalystAgent:
             try:
                 genai.configure(api_key=self.gemini_api_key)
                 # Updated model name to the correct one
-                self.model = genai.GenerativeModel('gemini-pro')
+                self.model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
                 print("Gemini model initialized successfully.")
             except Exception as e:
                 print(f"Error initializing Gemini model: {str(e)}")

@@ -4,10 +4,10 @@ ResearchAgent: Scrapes news, press releases, and social media from global source
 
 import requests
 from bs4 import BeautifulSoup
-import google.generativeai as genai
 from datetime import datetime
 import json
 import os
+import google.generativeai as genai
 from dotenv import load_dotenv
 
 class ResearchAgent:
@@ -15,91 +15,68 @@ class ResearchAgent:
         self.company = company
         self.output_dir = output_dir
         load_dotenv()
-        self.gemini_api_key = os.getenv("GEMINI_API_KEY")
         self.setup_models()
 
     def setup_models(self):
-        if self.gemini_api_key:
-            try:
-                genai.configure(api_key=self.gemini_api_key)
-                self.model = genai.GenerativeModel('gemini-pro')
-                print("Gemini model initialized successfully.")
-            except Exception as e:
-                print(f"Error initializing Gemini model: {str(e)}")
-                self.model = None
+        """Initialize Gemini model."""
+        if api_key := os.getenv("GEMINI_API_KEY"):
+            genai.configure(api_key=api_key)
+            self.model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
+            print("Gemini model initialized successfully.")
+        else:
+            self.model = None
+            print("Warning: GEMINI_API_KEY not found")
 
     def scrape_news(self):
         """Scrape news from multiple sources."""
-        news_data = []
-
-        # Google News
-        news_data.extend(self._scrape_google_news())
-
-        # Company Press Releases
-        news_data.extend(self._scrape_press_releases())
-
-        return news_data
-
-    def _scrape_google_news(self):
         try:
-            url = f"https://news.google.com/rss/search?q={self.company}&hl=en-US&gl=US&ceid=US:en"
-            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-            response = requests.get(url, headers=headers, timeout=10)
-
-            soup = BeautifulSoup(response.text, "xml")
             articles = []
-
-            for item in soup.find_all("item")[:5]:
-                title = item.title.text if item.title else None
-                link = item.link.text if item.link else None
-                pub_date = item.pubDate.text if item.pubDate else None
-
-                if title and link:
-                    articles.append({
-                        "title": title,
-                        "link": link,
-                        "date": pub_date,
-                        "source": "Google News"
-                    })
-
-            return articles
-        except Exception as e:
-            print(f"Error scraping Google News: {str(e)}")
-            return []
-
-    def _scrape_press_releases(self):
-        try:
-            # Add company-specific press release URLs
-            press_urls = {
-                "Samsung": "https://news.samsung.com/global/",
-                "Tesla": "https://ir.tesla.com/press"
+            
+            # Try Google News RSS
+            encoded_company = requests.utils.quote(self.company)
+            url = f"https://news.google.com/rss/search?q={encoded_company}&hl=en-US&gl=US&ceid=US:en"
+            
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0.4472.124",
+                "Accept": "application/xml,application/xhtml+xml,text/html",
+                "Accept-Language": "en-US,en;q=0.9",
             }
 
-            url = press_urls.get(self.company)
-            if not url:
-                return []
+            try:
+                response = requests.get(url, headers=headers, timeout=10)
+                if response.status_code == 200:
+                    soup = BeautifulSoup(response.content, "xml")
+                    for item in soup.find_all("item")[:5]:
+                        articles.append({
+                            "title": item.title.text if item.title else None,
+                            "link": item.link.text if item.link else None,
+                            "date": item.pubDate.text if item.pubDate else None,
+                            "source": "Google News"
+                        })
+            except requests.RequestException as e:
+                print(f"Warning: Could not fetch Google News - {str(e)}")
 
-            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-            response = requests.get(url, headers=headers, timeout=10)
-            soup = BeautifulSoup(response.text, "html.parser")
-
-            articles = []
-            # Customize selectors based on company website structure
-            for item in soup.select("article, .press-release")[:3]:
-                title = item.select_one("h2, h3, .title")
-                link = item.select_one("a")
-
-                if title and link:
-                    articles.append({
-                        "title": title.text.strip(),
-                        "link": link["href"],
-                        "date": datetime.now().strftime("%Y-%m-%d"),
-                        "source": f"{self.company} Press Release"
-                    })
+            # If no articles found, try alternative source
+            if not articles:
+                alternative_url = f"https://api.marketaux.com/v1/news/all?symbols={encoded_company}&api_token={os.getenv('MARKETAUX_API_KEY')}"
+                try:
+                    response = requests.get(alternative_url, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        for item in data.get('data', [])[:5]:
+                            articles.append({
+                                "title": item.get('title'),
+                                "link": item.get('url'),
+                                "date": item.get('published_at'),
+                                "source": item.get('source')
+                            })
+                except:
+                    pass
 
             return articles
+
         except Exception as e:
-            print(f"Error scraping press releases: {str(e)}")
+            print(f"Error in news scraping: {str(e)}")
             return []
 
     def run(self):
@@ -110,18 +87,16 @@ class ResearchAgent:
                 "news": self.scrape_news(),
                 "timestamp": datetime.now().isoformat()
             }
-            
-            # Create data directory if it doesn't exist
+
             os.makedirs(self.output_dir, exist_ok=True)
-            
-            # Save to JSON file
             output_path = os.path.join(self.output_dir, "raw_data.json")
+
             with open(output_path, "w") as f:
                 json.dump(news_data, f, indent=4)
             print(f"News data saved to {output_path}")
             
             return news_data
-            
+
         except Exception as e:
             print(f"Error in Research Agent: {str(e)}")
             return {}

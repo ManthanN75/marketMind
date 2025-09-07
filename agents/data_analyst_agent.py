@@ -30,7 +30,7 @@ class DataAnalystAgent:
         if self.gemini_api_key:
             try:
                 genai.configure(api_key=self.gemini_api_key)
-                self.model = genai.GenerativeModel('gemini-pro')
+                self.model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
                 print("Gemini model initialized successfully.")
             except Exception as e:
                 print(f"Error initializing Gemini model: {str(e)}")
@@ -39,25 +39,36 @@ class DataAnalystAgent:
     def analyze_data(self):
         """Process and analyze all available data."""
         try:
-            # Load data from various sources
+            # Force reload data each time
             financial_data = self._load_json("financial_data.json")
             news_data = self._load_json("raw_data.json")
             sentiment_data = self._load_json("sentiment_data.json")
 
+            if not financial_data or not news_data:
+                raise ValueError("Required data files not found or empty")
+
             analysis_results = {
-                "company": self.company,
+                "company": self.company,  # Use current company name
                 "timestamp": datetime.now().isoformat(),
                 "market_trends": self._analyze_market_trends(financial_data),
                 "competitor_analysis": self._analyze_competitors(news_data),
                 "opportunities": self._identify_opportunities(financial_data, sentiment_data),
                 "risk_factors": self._analyze_risks(financial_data, sentiment_data),
-                "summary": ""
+                "financial_metrics": {
+                    "market_cap": financial_data.get("market_cap", {}),
+                    "price_change": financial_data.get("price_change_percent"),
+                    "exchange": financial_data.get("exchange"),
+                    "currency": financial_data.get("market_cap", {}).get("currency", "USD")
+                },
+                "sentiment_overview": {
+                    "score": sentiment_data.get("sentiment_analysis", {}).get("overall_score", 0),
+                    "articles_analyzed": len(news_data.get("news", [])),
+                    "latest_sentiment": self._get_latest_sentiment(sentiment_data)
+                }
             }
 
-            # Generate summary using Gemini
-            if self.model:
-                analysis_results["summary"] = self._generate_summary(analysis_results)
-
+            # Save results
+            self.save_data(analysis_results)
             return analysis_results
 
         except Exception as e:
@@ -191,6 +202,25 @@ class DataAnalystAgent:
             print(f"Error generating summary: {str(e)}")
             return "Summary generation failed"
 
+    def _generate_analysis_summary(self, analysis_data):
+        """Generate summary of analysis results."""
+        try:
+            if not self.model:
+                return "Analysis summary unavailable - Gemini model not initialized"
+
+            prompt = f"""Analyze this market data for {self.company}:
+            Market Trends: {analysis_data.get('market_trends')}
+            Financial Metrics: {analysis_data.get('financial_metrics')}
+            Sentiment: {analysis_data.get('sentiment_overview')}
+            
+            Provide a brief summary of key findings."""
+            
+            response = self.model.generate_content(prompt)
+            return response.text.strip()
+        except Exception as e:
+            print(f"Error generating summary: {str(e)}")
+            return "Summary generation failed"
+
     def save_data(self, analysis_data):
         """Save analysis results to JSON."""
         os.makedirs(self.output_dir, exist_ok=True)
@@ -209,6 +239,19 @@ class DataAnalystAgent:
         if analysis_data:
             self.save_data(analysis_data)
         return analysis_data
+
+    def _get_latest_sentiment(self, sentiment_data):
+        """Extract latest sentiment trends."""
+        try:
+            sentiment = sentiment_data.get("sentiment_analysis", {})
+            return {
+                "overall_score": sentiment.get("overall_score", 0),
+                "trend": "positive" if sentiment.get("overall_score", 0) > 0.2 else
+                        "negative" if sentiment.get("overall_score", 0) < -0.2 else "neutral",
+                "confidence": "high" if abs(sentiment.get("overall_score", 0)) > 0.5 else "medium"
+            }
+        except:
+            return {}
 
 if __name__ == "__main__":
     agent = DataAnalystAgent(company="Samsung")

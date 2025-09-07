@@ -31,7 +31,7 @@ class RegulatoryAnalystAgent:
         """Initialize Gemini for regulatory analysis."""
         if api_key := os.getenv("GEMINI_API_KEY"):
             genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel('gemini-pro')
+            self.model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
         else:
             self.model = None
             print("Warning: Gemini API key not found")

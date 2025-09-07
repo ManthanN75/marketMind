@@ -1,14 +1,14 @@
 {
-    "company": "BMW",
-    "ticker": "BMW.DE",
-    "current_price": 88.54,
-    "price_change_percent": -0.07,
+    "company": "MCD",
+    "ticker": "MCD",
+    "current_price": 316.39,
+    "price_change_percent": 0.2,
     "market_cap": {
-        "value": 55073030144,
-        "currency": "EUR",
-        "usd_value": 58928142254.08,
-        "formatted": "$58.93B USD"
+        "value": 225777172480,
+        "currency": "USD",
+        "usd_value": 225777172480.0,
+        "formatted": "$225.78B"
     },
-    "exchange": "GER",
-    "timestamp": "2025-09-03T21:03:40.193343"
+    "exchange": "NYQ",
+    "timestamp": "2025-09-04T07:01:38.791270"
 }

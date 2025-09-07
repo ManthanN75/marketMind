@@ -89,12 +89,13 @@ class ReportWriterAgent:
         
         financial_data = data.get('financial', {})
         if financial_data:
-            # Create financial metrics table
+            market_cap = financial_data.get('market_cap', {})
             metrics = [
                 ['Metric', 'Value'],
                 ['Current Price', f"${financial_data.get('current_price', 'N/A')}"],
                 ['Price Change', f"{financial_data.get('price_change_percent', 'N/A')}%"],
-                ['Market Cap', f"${financial_data.get('market_cap', 'N/A'):,}"],
+                ['Market Cap', market_cap.get('formatted', 'N/A')],
+                ['Exchange', financial_data.get('exchange', 'N/A')]
             ]
             
             table = Table(metrics, colWidths=[2*inch, 2*inch])

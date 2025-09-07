@@ -7,6 +7,7 @@ from agents.research_agent import ResearchAgent
 from agents.sentiment_analyst_agent import SentimentAnalystAgent
 from agents.report_writer_agent import ReportWriterAgent
 from agents.regulatory_analyst_agent import RegulatoryAnalystAgent
+from agents.base_agent import BaseAgent
 
 
 def validate_company(company: str) -> bool:
@@ -16,17 +17,28 @@ def validate_company(company: str) -> bool:
 
 
 def run_market_mind(company: str):
-    """Run all MarketMind agents in sequence."""
+    """Run analysis for any global company."""
     print(f"\n=== MarketMind Analysis for {company} ===")
+    
+    # Validate API key first
+    base = BaseAgent()
+    if not base.validate_api_key():
+        print("\n⚠️ Running with limited functionality (no AI analysis)")
+        proceed = input("Continue anyway? (y/n): ").lower()
+        if proceed != 'y':
+            return
+
     print(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
 
     try:
-        # Validate company first
+        # Initialize Financial Agent for ticker lookup
         financial_agent = FinancialAnalystAgent(company)
         if not financial_agent.ticker_symbol:
-            print(f"❌ Error: Could not find valid ticker for {company}")
-            print("Try using a simpler name (e.g., 'BMW' instead of 'Bayerische Motoren Werke AG')")
-            return
+            print("\n❌ Company not found. Tips:")
+            print("- Try the official company name")
+            print("- Use local language name for Asian companies")
+            print("- Add the exchange identifier (e.g., .NS for Indian NSE)")
+            return False
 
         # Run agents
         print("🔍 Running Research Agent...")
@@ -69,8 +81,13 @@ def run_market_mind(company: str):
 
 if __name__ == "__main__":
     print("\nMarketMind - Global Company Analysis")
-    print("Examples: BMW, Apple, Toyota")
+    print("\nExample inputs:")
+    print("🇺🇸 US: Apple, Microsoft, Tesla")
+    print("🇮🇳 India: TCS.NS, Reliance.NS, HDFC.NS")
+    print("🇯🇵 Japan: 7203.T (Toyota), 6758.T (Sony)")
+    print("🇰🇷 Korea: 005930.KS (Samsung), 066570.KS (LG)")
+    print("🇷🇺 Russia: GAZP.ME, SBER.ME")
+    print("🇧🇷 Brazil: PETR4.SA, VALE3.SA")
     
-    company = input("\nCompany name: ").strip()
-    if not run_market_mind(company):
-        print("\nTip: Try using the company's common name or stock symbol")
+    company = input("\nEnter company name or ticker: ").strip()
+    run_market_mind(company)

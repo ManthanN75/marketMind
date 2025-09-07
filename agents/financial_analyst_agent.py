@@ -1,11 +1,13 @@
-import yfinance as yf
-import pandas as pd
 import json
 import os
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
-import google.generativeai as genai
 from typing import Optional
+
+import google.generativeai as genai
+import pandas as pd
+import yfinance as yf
+from dotenv import load_dotenv
+
 
 class FinancialAnalystAgent:
     def __init__(self, company, output_dir="data"):
@@ -20,141 +22,135 @@ class FinancialAnalystAgent:
         if self.gemini_api_key:
             try:
                 genai.configure(api_key=self.gemini_api_key)
-                self.model = genai.GenerativeModel('gemini-pro')
+                self.model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
                 print("Gemini model initialized successfully.")
             except Exception as e:
                 print(f"Error initializing Gemini model: {str(e)}")
                 self.model = None
 
     def _get_ticker_symbol(self, company: str) -> Optional[str]:
-        """Map company names to their ticker symbols."""
-        ticker_map = {
-            "Bayerische Motoren Werke AG": "BMW.DE",
-            "BMW": "BMW.DE",
-            # India
-            "Maruti Suzuki": "MARUTI.NS",
-            "Vedanta": "VEDL.NS",
+        """Dynamic global company ticker lookup."""
+        # Common stock symbols mapping
+        common_tickers = {
             "ITC": "ITC.NS",
-            "Bajaj": "BAJFINANCE.NS",
-            
-            # Global
-            "Tesla": "TSLA",
-            "LG": "066570.KS",
-            "Hyundai": "005380.KS",
-            "Honda": "7267.T",
-            "Boeing": "BA",
-            "Apple": "AAPL",
-            "Lenovo": "0992.HK"
+            "VEDANTA": "VEDL.NS",
+            "TCS": "TCS.NS",
+            "TESLA": "TSLA",
+            "APPLE": "AAPL",
+            "MICROSOFT": "MSFT"
         }
-        
-        # Clean company name
-        company_clean = company.upper().replace("AG", "").strip()
-        
-        # Try direct mapping first
-        if company in ticker_map:
-            return ticker_map[company]
-        
+
         try:
+            # Clean input
+            clean_name = company.upper().replace("LIMITED", "").replace("LTD", "").strip()
+            
+            # Check common tickers first
+            if clean_name in common_tickers:
+                ticker = yf.Ticker(common_tickers[clean_name])
+                if ticker.info:
+                    print(f"Found ticker: {common_tickers[clean_name]}")
+                    return common_tickers[clean_name]
+
+            # Try direct input if it contains exchange suffix
+            if any(suffix in company for suffix in ['.NS', '.BO', '.T', '.KS']):
+                ticker = yf.Ticker(company)
+                if ticker.info:
+                    print(f"Found ticker: {company}")
+                    return company
+
             # Try yfinance search
-            ticker = yf.Ticker(company_clean)
-            if ticker.info and 'symbol' in ticker.info:
-                return ticker.info['symbol']
-            
-            # Try common variations
-            variations = [
-                company_clean,
-                company_clean + ".DE",  # German stocks
-                company_clean + ".F"     # Frankfurt exchange
-            ]
-            
-            for variation in variations:
-                try:
-                    ticker = yf.Ticker(variation)
-                    info = ticker.info
-                    if info and 'regularMarketPrice' in info:
-                        return variation
-                except:
-                    continue
-                
+            try:
+                ticker = yf.Ticker(clean_name)
+                if ticker.info and 'regularMarketPrice' in ticker.info:
+                    print(f"Found ticker: {clean_name}")
+                    return clean_name
+            except:
+                pass
+
             return None
+
         except Exception as e:
-            print(f"Error finding ticker: {str(e)}")
+            print(f"Error in ticker lookup: {str(e)}")
             return None
 
     def fetch_financial_data(self):
-        """Fetch comprehensive financial data."""
+        """Fetch and format financial data with proper currency handling."""
         try:
             ticker = yf.Ticker(self.ticker_symbol)
+            info = ticker.info
 
-            # Get market cap and currency info
-            market_cap = ticker.info.get('marketCap')
-            currency = ticker.info.get("currency", "USD")
-            # Currency conversion rates (can be updated with real-time forex data)
-            forex_rates = {
-                "JPY": 0.0068,  # 1 JPY = 0.0068 USD
-                "KRW": 0.00075, # 1 KRW = 0.00075 USD
-                "EUR": 1.07     # 1 EUR = 1.07 USD
+            # Get market cap and currency
+            market_cap = info.get('marketCap')
+            currency = info.get('currency', 'USD')
+
+            # Standardize exchange names
+            exchange_map = {
+                'NSI': 'NSE',  # Fix for Indian National Stock Exchange
+                'BSE': 'BSE'   # Bombay Stock Exchange
             }
 
-            # Convert market cap to USD if needed
-            if currency != "USD" and currency in forex_rates:
-                usd_market_cap = market_cap * forex_rates[currency]
-            else:
-                usd_market_cap = market_cap
+            # More accurate currency conversion rates
+            fx_rates = {
+                'INR': 0.012075,  # 1 INR = 0.012075 USD (as of current rate)
+                'JPY': 0.0068,    # 1 JPY = 0.0068 USD
+                'KRW': 0.00075,   # 1 KRW = 0.00075 USD
+                'EUR': 1.07,      # 1 EUR = 1.07 USD
+                'USD': 1.0
+            }
 
-            # Get current price and calculate change
-            current_price = ticker.fast_info.last_price
-            hist = ticker.history(period="2d")
-            price_change = 0
-            if not hist.empty and len(hist) >= 2:
-                prev_close = hist['Close'].iloc[-2]
-                price_change = ((current_price - prev_close) / prev_close) * 100
+            exchange = exchange_map.get(info.get('exchange', ''), info.get('exchange', 'N/A'))
 
             financial_data = {
                 "company": self.company,
                 "ticker": self.ticker_symbol,
-                "current_price": round(float(current_price), 2),
-                "price_change_percent": round(float(price_change), 2),
+                "current_price": round(float(info.get('regularMarketPrice', 0)), 2),
+                "price_change_percent": round(float(info.get('regularMarketChangePercent', 0)), 2),
                 "market_cap": {
                     "value": market_cap,
                     "currency": currency,
-                    "usd_value": usd_market_cap,
-                    "formatted": f"${usd_market_cap/1e9:.2f}B USD"
+                    "usd_value": round(market_cap * fx_rates.get(currency, 1.0), 2) if market_cap else None,
+                    "formatted": self._format_market_cap(market_cap, currency)
                 },
-                "exchange": ticker.info.get("exchange", "N/A"),
+                "exchange": exchange,
                 "timestamp": datetime.now().isoformat()
             }
+
             return financial_data
+
         except Exception as e:
             print(f"Error fetching financial data: {str(e)}")
             return {}
 
-    def _format_market_cap(self, market_cap):
-        """Format market cap into readable format based on listing currency."""
-        try:
-            if not market_cap:
-                return "N/A"
-
-            # Handle Japanese stocks (listed in JPY)
-            if self.ticker_symbol.endswith('.T'):
-                if market_cap >= 1e12:  # Trillion JPY
-                    return f"¥{market_cap/1e12:.2f}T"
-                elif market_cap >= 1e9:  # Billion JPY
-                    return f"¥{market_cap/1e9:.2f}B"
-                elif market_cap >= 1e6:  # Million JPY
-                    return f"¥{market_cap/1e6:.2f}M"
-            else:
-                # For USD and other currencies
-                if market_cap >= 1e12:
-                    return f"${market_cap/1e12:.2f}T"
-                elif market_cap >= 1e9:
-                    return f"${market_cap/1e9:.2f}B"
-                elif market_cap >= 1e6:
-                    return f"${market_cap/1e6:.2f}M"
-
-            return f"${market_cap:,.2f}"
-        except Exception:
+    def _format_market_cap(self, value, currency):
+        """Format market cap with proper currency symbols."""
+        if not value:
             return "N/A"
+
+        currency_symbols = {
+            'USD': '$',
+            'INR': '₹',
+            'JPY': '¥',
+            'KRW': '₩',
+            'EUR': '€'
+        }
+
+        symbol = currency_symbols.get(currency, currency + ' ')
+
+        # Handle Indian values in Crores
+        if currency == 'INR':
+            if value >= 1e7:
+                return f"{symbol}{value/1e7:.2f} Cr"
+            elif value >= 1e5:
+                return f"{symbol}{value/1e5:.2f} Lakh"
+        else:
+            if value >= 1e12:
+                return f"{symbol}{value/1e12:.2f}T"
+            elif value >= 1e9:
+                return f"{symbol}{value/1e9:.2f}B"
+            elif value >= 1e6:
+                return f"{symbol}{value/1e6:.2f}M"
+
+        return f"{symbol}{value:,.2f}"
 
     def _calculate_ratios(self, balance_sheet, income_stmt):
         """Calculate important financial ratios."""
@@ -162,7 +158,7 @@ class FinancialAnalystAgent:
             return {
                 "quick_ratio": self._calculate_quick_ratio(balance_sheet),
                 "debt_to_equity": self._calculate_debt_to_equity(balance_sheet),
-                "profit_margin": self._calculate_profit_margin(income_stmt)
+                "profit_margin": self._calculate_profit_margin(income_stmt),
             }
         except Exception as e:
             print(f"Error calculating ratios: {str(e)}")
@@ -207,6 +203,7 @@ class FinancialAnalystAgent:
         if financial_data:
             self.save_data(financial_data)
         return financial_data
+
 
 if __name__ == "__main__":
     agent = FinancialAnalystAgent(company="Samsung")
