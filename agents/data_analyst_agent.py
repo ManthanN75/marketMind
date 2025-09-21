@@ -16,13 +16,30 @@ class DataAnalystAgent:
         self.setup_models()
     
     def _load_competitor_map(self):
-        """Load company-competitor mapping."""
+        """Enhanced company-competitor mapping with industry categorization."""
         self.competitor_map = {
-            "Samsung": ["Apple", "LG", "Sony", "Xiaomi"],
-            "Tesla": ["Ford", "GM", "Volkswagen", "BYD"],
-            "Toyota": ["Honda", "Volkswagen", "Hyundai", "Ford"],
-            "Volkswagen": ["Toyota", "BMW", "Mercedes", "Tesla"]
-        }
+            # Technology Companies
+            "SAMSUNG": ["Apple", "LG", "Sony", "Xiaomi", "Huawei", "Google", "Microsoft"],
+            "APPLE": ["Samsung", "Google", "Microsoft", "Sony", "Xiaomi", "Huawei"],
+            "MICROSOFT": ["Apple", "Google", "Amazon", "Oracle", "IBM", "Adobe"],
+            "GOOGLE": ["Apple", "Microsoft", "Amazon", "Meta", "Netflix", "Adobe"],
+
+            # Automotive
+            "TESLA": ["Ford", "GM", "Volkswagen", "BYD", "Toyota", "BMW", "Mercedes"],
+            "TOYOTA": ["Honda", "Volkswagen", "Hyundai", "Ford", "GM", "Nissan", "BMW"],
+            "VOLKSWAGEN": ["Toyota", "BMW", "Mercedes", "Tesla", "Ford", "GM", "Hyundai"],
+            "FORD": ["GM", "Toyota", "Volkswagen", "Tesla", "Stellantis", "Honda"],
+            "GM": ["Ford", "Toyota", "Tesla", "Volkswagen", "Stellantis", "Honda"],
+
+            # Fast Food/Restaurant
+            "MCD": ["Burger King", "KFC", "Subway", "Pizza Hut", "Dominos", "Starbucks"],
+            "MCDONALDS": ["Burger King", "KFC", "Subway", "Pizza Hut", "Dominos", "Starbucks"],
+
+            # Indian Companies
+            "TCS": ["Infosys", "Wipro", "HCL", "Tech Mahindra", "Cognizant", "Accenture"],
+            "INFOSYS": ["TCS", "Wipro", "HCL", "Tech Mahindra", "Cognizant", "IBM"],
+            "ITC": ["HUL", "Nestle", "Britannia", "Godrej", "Dabur", "Marico"],
+            "VEDANTA": ["Tata Steel", "JSW Steel", "SAIL", "Hindalco"]}
 
     def setup_models(self):
         """Initialize Gemini model for advanced analysis."""
