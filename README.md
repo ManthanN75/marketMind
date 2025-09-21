@@ -2,7 +2,7 @@
 
 AI-powered market research and analysis tool that gathers and analyzes company information from multiple sources globally.
 
-## Features
+ Features
 
 - Research Agent: Global news and press release scraping
 - Financial Analyst: Real-time stock data and financial metrics
@@ -11,7 +11,7 @@ AI-powered market research and analysis tool that gathers and analyzes company i
 - Regulatory Analyst: Global compliance monitoring
 - Report Writer: Comprehensive PDF report generation
 
-## Setup
+ Setup
 
 1. Clone the repository:
 ```bash
