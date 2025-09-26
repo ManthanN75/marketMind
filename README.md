@@ -2,7 +2,7 @@
 
 An intelligent multi-agent system for comprehensive market research and financial analysis. MarketMind leverages AI to gather, analyze, and synthesize company information from multiple global sources, providing actionable insights for investment decisions and market understanding.
 
-## 🌟 Features
+🌟 Features
 
 ### Multi-Agent Architecture
 - **Research Agent**: Scrapes news from Google News, Yahoo Finance, and MarketWatch
