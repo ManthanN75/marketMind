@@ -8,6 +8,7 @@ from agents.sentiment_analyst_agent import SentimentAnalystAgent
 from agents.report_writer_agent import ReportWriterAgent
 from agents.regulatory_analyst_agent import RegulatoryAnalystAgent
 from agents.base_agent import BaseAgent
+from agents.gemini_client import disable_gemini
 
 
 def validate_company(company: str) -> bool:
@@ -27,6 +28,7 @@ def run_market_mind(company: str):
         proceed = input("Continue anyway? (y/n): ").lower()
         if proceed != 'y':
             return
+        disable_gemini()
 
     print(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
 

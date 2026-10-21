@@ -27,7 +27,7 @@ class SentimentAnalystAgent:
         if self.gemini_api_key:
             try:
                 self.model = create_gemini_model(self.gemini_api_key)
-                print("Gemini model initialized successfully.")
+                print("Gemini client initialized.")
             except Exception as e:
                 print(f"Error initializing Gemini model: {str(e)}")
                 self.model = None
@@ -132,7 +132,7 @@ class SentimentAnalystAgent:
         """Analyze sentiment from news articles."""
         try:
             input_path = os.path.join(self.input_dir, "raw_data.json")
-            with open(input_path, "r") as f:
+            with open(input_path, "r", encoding="utf-8") as f:
                 news_data = json.load(f)
 
             sentiment_result = {
@@ -203,8 +203,8 @@ class SentimentAnalystAgent:
         os.makedirs(self.output_dir, exist_ok=True)
         output_path = os.path.join(self.output_dir, "sentiment_data.json")
         try:
-            with open(output_path, "w") as f:
-                json.dump(sentiment_data, f, indent=4)
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(sentiment_data, f, indent=4, ensure_ascii=False)
             print(f"Sentiment data saved to {output_path}")
         except Exception as e:
             print(f"Error saving sentiment data: {str(e)}")

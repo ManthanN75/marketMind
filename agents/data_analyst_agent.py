@@ -48,7 +48,7 @@ class DataAnalystAgent:
         if self.gemini_api_key:
             try:
                 self.model = create_gemini_model(self.gemini_api_key)
-                print("Gemini model initialized successfully.")
+                print("Gemini client initialized.")
             except Exception as e:
                 print(f"Error initializing Gemini model: {str(e)}")
                 self.model = None
@@ -95,7 +95,7 @@ class DataAnalystAgent:
     def _load_json(self, filename):
         """Load JSON data from file."""
         try:
-            with open(os.path.join(self.input_dir, filename), 'r') as f:
+            with open(os.path.join(self.input_dir, filename), 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
             print(f"Error loading {filename}: {str(e)}")
@@ -203,6 +203,8 @@ class DataAnalystAgent:
 
     def _generate_summary(self, analysis):
         """Generate summary using Gemini."""
+        if not self.model:
+            return "Summary unavailable - Gemini API is not available"
         try:
             prompt = f"""Analyze this market data for {self.company}:
             Market Trends: {analysis['market_trends']}
@@ -244,8 +246,8 @@ class DataAnalystAgent:
         output_path = os.path.join(self.output_dir, "analysis_data.json")
         
         try:
-            with open(output_path, "w") as f:
-                json.dump(analysis_data, f, indent=4)
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(analysis_data, f, indent=4, ensure_ascii=False)
             print(f"Analysis data saved to {output_path}")
         except Exception as e:
             print(f"Error saving analysis data: {str(e)}")

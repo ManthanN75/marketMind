@@ -37,10 +37,10 @@ class ResearchAgent:
         """Initialize Gemini model."""
         try:
             self.model = create_gemini_model()
-            print("Gemini model initialized successfully.")
+            print("Gemini client initialized.")
         except ValueError:
             self.model = None
-            print("Warning: GEMINI_API_KEY not found")
+            print("Warning: Gemini client unavailable; skipping AI relevance analysis")
 
     def scrape_google_news(self):
         """Scrape Google News RSS with better error handling."""

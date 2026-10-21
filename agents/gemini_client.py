@@ -5,6 +5,14 @@ import os
 from dotenv import load_dotenv
 from google import genai
 
+_gemini_disabled = False
+
+
+def disable_gemini():
+    """Disable further Gemini calls after startup authentication fails."""
+    global _gemini_disabled
+    _gemini_disabled = True
+
 
 class GeminiModel:
     """Small compatibility wrapper for the project's text generation calls."""
@@ -30,4 +38,6 @@ class GeminiModel:
 
 def create_gemini_model(api_key=None):
     """Create the shared model wrapper used by each analysis agent."""
+    if _gemini_disabled:
+        raise ValueError("Gemini disabled because API authentication failed")
     return GeminiModel(api_key=api_key)

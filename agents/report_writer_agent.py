@@ -42,7 +42,7 @@ class ReportWriterAgent:
         
         for key, filename in files.items():
             try:
-                with open(os.path.join(self.input_dir, filename), 'r') as f:
+                with open(os.path.join(self.input_dir, filename), 'r', encoding='utf-8') as f:
                     data[key] = json.load(f)
             except Exception as e:
                 print(f"Warning: Could not load {filename}: {str(e)}")

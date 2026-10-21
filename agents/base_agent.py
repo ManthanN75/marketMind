@@ -17,7 +17,7 @@ class BaseAgent:
                 raise ValueError("GEMINI_API_KEY not found in .env file")
 
             self.model = create_gemini_model(api_key)
-            print("✅ Gemini API connected successfully")
+            print("✅ Gemini client initialized; API authentication is checked on first request")
             return True
 
         except Exception as e:

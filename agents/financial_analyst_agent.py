@@ -24,7 +24,7 @@ class FinancialAnalystAgent:
         if self.gemini_api_key:
             try:
                 self.model = create_gemini_model(self.gemini_api_key)
-                print("Gemini model initialized successfully.")
+                print("Gemini client initialized.")
             except Exception as e:
                 print(f"Error initializing Gemini model: {str(e)}")
                 self.model = None

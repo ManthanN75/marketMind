@@ -34,13 +34,13 @@ class RegulatoryAnalystAgent:
             self.model = create_gemini_model()
         except ValueError:
             self.model = None
-            print("Warning: Gemini API key not found")
+            print("Warning: Gemini client unavailable; skipping AI regulatory analysis")
 
     def analyze_regulations(self):
         """Analyze regulatory mentions in news data."""
         try:
             # Load news data
-            with open(os.path.join(self.input_dir, "raw_data.json"), "r") as f:
+            with open(os.path.join(self.input_dir, "raw_data.json"), "r", encoding="utf-8") as f:
                 news_data = json.load(f)
 
             company_regs = self.regulatory_map.get(self.company, {})
@@ -96,8 +96,8 @@ class RegulatoryAnalystAgent:
         output_path = os.path.join(self.output_dir, "regulatory_data.json")
         
         try:
-            with open(output_path, "w") as f:
-                json.dump(regulatory_data, f, indent=4)
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(regulatory_data, f, indent=4, ensure_ascii=False)
             print(f"Regulatory data saved to {output_path}")
         except Exception as e:
             print(f"Error saving regulatory data: {str(e)}")
