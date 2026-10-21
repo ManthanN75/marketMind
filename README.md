@@ -27,7 +27,7 @@ An intelligent multi-agent system for comprehensive market research and financia
 
 ## 🛠️ Technology Stack
 
-- **AI/ML**: Google Gemini 1.5 Pro for advanced analysis
+- **AI/ML**: Google Gen AI SDK with Gemini 3.8 Flash by default (configurable)
 - **Data Sources**: Yahoo Finance, Google News, MarketWatch
 - **Analysis**: TextBlob, NLTK for sentiment analysis
 - **Visualization**: ReportLab for PDF generation
@@ -35,7 +35,7 @@ An intelligent multi-agent system for comprehensive market research and financia
 
 ## 📋 Prerequisites
 
-- Python 3.8+
+- Python 3.11+
 - Google Gemini API Key
 - Internet connection for real-time data
 
@@ -120,6 +120,7 @@ marketMind/
 ### Environment Variables
 ```bash
 GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-3.8-flash
 TWITTER_API_KEY=optional
 TWITTER_API_SECRET=optional
 ```
@@ -172,6 +173,7 @@ TWITTER_API_SECRET=optional
 ```bash
 # Ensure your .env file contains:
 GEMINI_API_KEY=your_actual_api_key
+GEMINI_MODEL=gemini-3.8-flash
 ```
 
 **Company Not Found**

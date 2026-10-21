@@ -1,7 +1,7 @@
 import json
 import os
 from datetime import datetime
-import google.generativeai as genai
+from agents.gemini_client import create_gemini_model
 from dotenv import load_dotenv
 
 class RegulatoryAnalystAgent:
@@ -29,10 +29,10 @@ class RegulatoryAnalystAgent:
 
     def setup_model(self):
         """Initialize Gemini for regulatory analysis."""
-        if api_key := os.getenv("GEMINI_API_KEY"):
-            genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
-        else:
+        self.model = None
+        try:
+            self.model = create_gemini_model()
+        except ValueError:
             self.model = None
             print("Warning: Gemini API key not found")
 

@@ -1,7 +1,7 @@
 import json
 import os
 from datetime import datetime
-import google.generativeai as genai
+from agents.gemini_client import create_gemini_model
 from dotenv import load_dotenv
 from textblob import TextBlob
 import nltk
@@ -26,9 +26,7 @@ class SentimentAnalystAgent:
         self.model = None
         if self.gemini_api_key:
             try:
-                genai.configure(api_key=self.gemini_api_key)
-                # Updated model name to the correct one
-                self.model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
+                self.model = create_gemini_model(self.gemini_api_key)
                 print("Gemini model initialized successfully.")
             except Exception as e:
                 print(f"Error initializing Gemini model: {str(e)}")

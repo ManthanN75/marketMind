@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 import os
-import google.generativeai as genai
+from agents.gemini_client import create_gemini_model
 
 class BaseAgent:
     def __init__(self):
@@ -8,7 +8,7 @@ class BaseAgent:
         self.setup_model()
 
     def setup_model(self):
-        """Initialize Gemini model with proper error handling."""
+        """Initialize model with proper error handling."""
         try:
             load_dotenv(override=True)
 
@@ -16,19 +16,7 @@ class BaseAgent:
             if not api_key:
                 raise ValueError("GEMINI_API_KEY not found in .env file")
 
-            # Updated Gemini configuration
-            genai.configure(api_key=api_key)
-
-            # List available models first
-            models = [m.name for m in genai.list_models()]
-            print("Available models:", models)
-
-            # Use the correct model name
-            model_name = 'models/gemini-pro'
-            if model_name not in models:
-                raise ValueError(f"Model {model_name} not available. Please use one of: {models}")
-
-            self.model = genai.GenerativeModel(model_name)
+            self.model = create_gemini_model(api_key)
             print("✅ Gemini API connected successfully")
             return True
 
@@ -44,10 +32,9 @@ class BaseAgent:
                 print("❌ Warning: GEMINI_API_KEY not found")
                 return False
 
-            genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-            model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
-            response = model.generate_content("Test")
-            return True
+            model = create_gemini_model(os.getenv("GEMINI_API_KEY"))
+            response = model.generate_content("Reply with the word OK.")
+            return bool(response.text)
         except Exception as e:
             print(f"❌ API key validation failed: {str(e)}")
             return False

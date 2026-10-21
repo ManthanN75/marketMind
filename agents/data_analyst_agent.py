@@ -4,7 +4,7 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 from dotenv import load_dotenv
-import google.generativeai as genai
+from agents.gemini_client import create_gemini_model
 
 class DataAnalystAgent:
     def __init__(self, company, input_dir="data", output_dir="data"):
@@ -43,11 +43,11 @@ class DataAnalystAgent:
 
     def setup_models(self):
         """Initialize Gemini model for advanced analysis."""
+        self.model = None
         self.gemini_api_key = os.getenv("GEMINI_API_KEY")
         if self.gemini_api_key:
             try:
-                genai.configure(api_key=self.gemini_api_key)
-                self.model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
+                self.model = create_gemini_model(self.gemini_api_key)
                 print("Gemini model initialized successfully.")
             except Exception as e:
                 print(f"Error initializing Gemini model: {str(e)}")

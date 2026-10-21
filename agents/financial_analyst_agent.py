@@ -3,11 +3,11 @@ import os
 from datetime import datetime, timedelta
 from typing import Optional
 
-import google.generativeai as genai
 import pandas as pd
 import requests
 import yfinance as yf
 from dotenv import load_dotenv
+from agents.gemini_client import create_gemini_model
 
 
 class FinancialAnalystAgent:
@@ -19,11 +19,11 @@ class FinancialAnalystAgent:
         self.setup_models()
 
     def setup_models(self):
+        self.model = None
         self.gemini_api_key = os.getenv("GEMINI_API_KEY")
         if self.gemini_api_key:
             try:
-                genai.configure(api_key=self.gemini_api_key)
-                self.model = genai.GenerativeModel("models/gemini-1.5-pro-latest")
+                self.model = create_gemini_model(self.gemini_api_key)
                 print("Gemini model initialized successfully.")
             except Exception as e:
                 print(f"Error initializing Gemini model: {str(e)}")

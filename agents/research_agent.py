@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import json
 import os
-import google.generativeai as genai
+from agents.gemini_client import create_gemini_model
 from dotenv import load_dotenv
 import time
 import random
@@ -35,11 +35,10 @@ class ResearchAgent:
 
     def setup_models(self):
         """Initialize Gemini model."""
-        if api_key := os.getenv("GEMINI_API_KEY"):
-            genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
+        try:
+            self.model = create_gemini_model()
             print("Gemini model initialized successfully.")
-        else:
+        except ValueError:
             self.model = None
             print("Warning: GEMINI_API_KEY not found")
 
