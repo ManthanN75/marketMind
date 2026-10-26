@@ -16,6 +16,10 @@ ENV/
 # Data files
 data/*.json
 !data/.gitkeep
+data/runs/
+
+# Generated reports
+reports/*_capital_compass.pdf
 
 # Logs
 *.log

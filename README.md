@@ -1,222 +1,69 @@
-# MarketMind 🧠📈
+# Capital Compass
 
-An intelligent multi-agent system for comprehensive market research and financial analysis. MarketMind leverages AI to gather, analyze, and synthesize company information from multiple global sources, providing actionable insights for investment decisions and market understanding.
+**Company research, made clear.** Capital Compass creates a source-linked brief for a public company and, when selected, a competitor. It combines financial performance, valuation context, recent company news, event headlines to review, and a plain-language business profile.
 
-🌟 Features
+## What it does
 
-### Multi-Agent Architecture
-- **Research Agent**: Scrapes news from Google News, Yahoo Finance, and MarketWatch
-- **Financial Analyst**: Real-time stock data with global market support (NYSE, NASDAQ, NSE, KRX, TSE)
-- **Sentiment Analyst**: AI-powered sentiment analysis with legal risk detection
-- **Data Analyst**: Market trends, competitor analysis, and opportunity identification
-- **Regulatory Analyst**: Compliance monitoring and regulatory risk assessment
-- **Report Writer**: Professional PDF reports with comprehensive analysis
+- Finds listed-company candidates by name using Yahoo Finance search, or accepts a ticker directly. It asks you to confirm a match before using it.
+- Suggests a competitor for selected common companies and lets you enter a different public company or skip the comparison. Suggestions are starting points; companies can differ in business mix.
+- Compares share price returns over 1 month, 3 months, 6 months, 1 year, 3 years, and 5 years, plus available revenue/earnings growth, profit margin, return on equity, market capitalization, and valuation ratios.
+- Calculates annualized volatility and maximum drawdown from daily adjusted prices, and compares returns with a listing-region benchmark.
+- Retrieves recent Google News headlines, shows publisher/date/source links, and calculates a simple headline-tone estimate.
+- Surfaces headlines that match legal, regulatory, safety, privacy, or controversy keywords for human review.
+- Shows the provider's company profile and available annual R&D and capital-expenditure figures.
+- Saves a timestamped JSON evidence snapshot and generates a readable PDF report.
 
-### Global Market Coverage
-- **US Markets**: NYSE, NASDAQ (Apple, Tesla, Microsoft, McDonald's)
-- **Indian Markets**: NSE, BSE (TCS, ITC, Vedanta, Reliance)
-- **Asian Markets**: KRX, TSE (Samsung, Toyota, Sony, Honda)
-- **European Markets**: XETRA (BMW, Mercedes, Volkswagen, SAP)
+## Run it
 
-### Advanced Analytics
-- Multi-currency support with regional formatting
-- AI-powered news relevance scoring
-- Legal risk detection and compliance monitoring
-- Competitor analysis with industry categorization
-- Automated report generation with professional formatting
+Python 3.11 or newer is recommended.
 
-## 🛠️ Technology Stack
-
-- **AI/ML**: Google Gen AI SDK with Gemini 3.8 Flash by default (configurable)
-- **Data Sources**: Yahoo Finance, Google News, MarketWatch
-- **Analysis**: TextBlob, NLTK for sentiment analysis
-- **Visualization**: ReportLab for PDF generation
-- **Data Processing**: Pandas, NumPy for financial calculations
-
-## 📋 Prerequisites
-
-- Python 3.11+
-- Google Gemini API Key
-- Internet connection for real-time data
-
-## 🚀 Quick Start
-
-### 1. Clone and Setup
-```bash
-git clone https://github.com/ManthanN75/marketMind.git
-cd marketMind
-
-# Create virtual environment
+```powershell
+# Create and activate a virtual environment
 python -m venv venv
+.\venv\Scripts\Activate.ps1
 
-# Activate virtual environment
-# Windows:
-.\venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-```
+# Install dependencies
+python -m pip install -r requirements.txt
 
-### 2. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Configure Environment
-```bash
-# Copy example environment file
-cp .env.example .env
-
-# Edit .env file with your API keys
-GEMINI_API_KEY=your_gemini_api_key_here
-```
-
-### 4. Run Analysis
-```bash
+# Start the app
 python main.py
 ```
 
-## 💡 Usage Examples
+Enter a company name or ticker. Confirm the matched listing, then accept the suggested competitor, enter another competitor, or type `skip`.
 
-### Supported Company Formats
-```python
-# US Companies
-"Apple", "AAPL", "Tesla", "TSLA", "McDonald's", "MCD"
+Examples: `Apple`, `Tesla`, `TCS.NS`, `6758.T`, `005930.KS`.
 
-# Indian Companies  
-"TCS", "TCS.NS", "ITC Limited", "Vedanta"
+The core Capital Compass workflow does **not** require a Gemini API key. It uses Yahoo Finance data and Google News RSS, so it can run without Gemini availability or billing configuration.
 
-# Global Companies
-"Samsung", "Toyota", "BMW.DE", "Sony"
+## Output
+
+Each run gets a unique directory, so reports cannot accidentally mix company data from an earlier run:
+
+```text
+data/runs/<ticker>_<run-id>/capital_compass_report.json
+reports/<ticker>_<run-id>_capital_compass.pdf
 ```
 
-### Sample Analysis Flow
-1. **Enter Company Name**: `Tesla`
-2. **Data Collection**: News scraping, financial data retrieval
-3. **AI Analysis**: Sentiment analysis, risk assessment, trend identification
-4. **Report Generation**: Comprehensive PDF with actionable insights
+The JSON file contains the figures, news items, event flags, source URLs, retrieval timestamps, and methodology used for the report. Reports are intended for reading and sharing; generated run files are excluded from Git.
 
-## 📊 Output Structure
+## Data and interpretation
 
+- Market and financial information comes from Yahoo Finance through `yfinance`; availability and completeness vary by listing and company.
+- News is retrieved from Google News RSS for the past three months. An empty feed does not mean that no news or events exist.
+- Headline tone is estimated with TextBlob from headline text and the RSS description. It is not polling of public opinion, full-article analysis, or a prediction.
+- Event flags are keyword matches, not confirmation of wrongdoing. Open the linked article and verify its facts, legal status, date, and the company's response.
+- R&D and capital expenditure are broad reported figures. R&D is not always technology-only, and capital expenditure includes investment across the business.
+- Cross-market returns are percentages; currencies and market calendars differ. Valuation ratios need industry context.
+- This project is for research and education. It does not provide investment advice or trading recommendations.
+
+## Suggested competitor coverage
+
+The app includes initial suggestions for pairs such as Apple/Samsung, Tesla/BYD, NVIDIA/AMD, Microsoft/Alphabet, Toyota/Volkswagen, and TCS/Infosys. For other companies, enter a peer of your choice. An automatic same-industry suggestion is not always a true direct competitor, so the app keeps the user in control.
+
+## Project structure
+
+```text
+main.py                          CLI entry point
+agents/company_research.py       Company lookup, data collection, calculations, evidence
+agents/capital_compass_report.py  Source-linked PDF report generation
 ```
-marketMind/
-├── data/
-│   ├── raw_data.json          # Scraped news articles
-│   ├── financial_data.json    # Stock data and metrics
-│   ├── sentiment_data.json    # Sentiment analysis results
-│   ├── analysis_data.json     # Market trends and insights
-│   └── regulatory_data.json   # Compliance information
-├── reports/
-│   └── [Company]_report.pdf   # Professional analysis report
-└── logs/
-    └── analysis.log           # System logs
-```
-
-## 🔧 Configuration
-
-### API Keys Required
-- **Gemini API**: For advanced AI analysis and insights
-- **Optional APIs**: Twitter/X API for social sentiment (future enhancement)
-
-### Environment Variables
-```bash
-GEMINI_API_KEY=your_key_here
-GEMINI_MODEL=gemini-3.8-flash
-TWITTER_API_KEY=optional
-TWITTER_API_SECRET=optional
-```
-
-## 🌍 Global Market Support
-
-### Supported Exchanges
-| Region | Exchange | Suffix | Example |
-|--------|----------|--------|---------|
-| USA | NYSE, NASDAQ | - | AAPL, TSLA |
-| India | NSE | .NS | TCS.NS, ITC.NS |
-| India | BSE | .BO | TCS.BO |
-| South Korea | KRX | .KS | 005930.KS |
-| Japan | TSE | .T | 7203.T |
-| Germany | XETRA | .DE | BMW.DE |
-
-### Currency Support
-- USD ($) - US Dollar
-- INR (₹) - Indian Rupee with Crore/Lakh formatting
-- JPY (¥) - Japanese Yen
-- KRW (₩) - Korean Won
-- EUR (€) - Euro
-
-## 🧮 Analysis Capabilities
-
-### Financial Metrics
-- Current price and price changes
-- Market capitalization (multi-currency)
-- P/E ratios and financial health indicators
-- 52-week high/low ranges
-- Trading volume analysis
-
-### Sentiment Analysis
-- News sentiment scoring (-1 to +1)
-- Legal risk detection
-- Market trend identification
-- Social media sentiment (when configured)
-
-### Competitive Intelligence
-- Industry competitor mapping
-- Market share analysis
-- Competitive positioning
-- Strategic opportunity identification
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**API Key Errors**
-```bash
-# Ensure your .env file contains:
-GEMINI_API_KEY=your_actual_api_key
-GEMINI_MODEL=gemini-3.8-flash
-```
-
-**Company Not Found**
-- Try alternative company names or ticker symbols
-- Check supported exchanges list
-- Use full company names for better results
-
-**Network Issues**
-- Ensure stable internet connection
-- Some regions may require VPN for certain data sources
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/new-feature`)
-3. Commit changes (`git commit -m 'Add new feature'`)
-4. Push to branch (`git push origin feature/new-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-- Follow PEP 8 style guidelines
-- Add comprehensive error handling
-- Include unit tests for new features
-- Update documentation for new capabilities
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Google Gemini API for advanced AI capabilities
-- Yahoo Finance for real-time financial data
-- Various news sources for comprehensive coverage
-- Open-source Python community for excellent libraries
-
-## 📞 Support
-
-For issues, questions, or contributions:
-- Open an issue on GitHub
-- Check existing documentation
-- Review troubleshooting section
-
----
-
-**MarketMind** - Intelligent Market Analysis for Informed Decisions 🎯
