@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 import re
 from typing import Any
 from urllib.parse import quote
@@ -50,7 +51,18 @@ BENCHMARKS = {
     ".NS": ("NIFTY 50", "^NSEI"), ".BO": ("BSE SENSEX", "^BSESN"),
     ".T": ("Nikkei 225", "^N225"), ".KS": ("KOSPI", "^KS11"),
     ".DE": ("DAX", "^GDAXI"), ".L": ("FTSE 100", "^FTSE"),
-    ".HK": ("Hang Seng", "^HSI"),
+    ".HK": ("Hang Seng", "^HSI"), ".SA": ("Bovespa", "^BVSP"),
+    ".AX": ("S&P/ASX 200", "^AXJO"), ".TO": ("S&P/TSX Composite", "^GSPTSE"),
+    ".PA": ("CAC 40", "^FCHI"),
+}
+
+NEWS_LOCALES = {
+    ".NS": ("en-IN", "IN", "IN:en"), ".BO": ("en-IN", "IN", "IN:en"),
+    ".KS": ("en-US", "KR", "KR:en"), ".T": ("en-US", "JP", "JP:en"),
+    ".DE": ("en-US", "DE", "DE:en"), ".L": ("en-GB", "GB", "GB:en"),
+    ".HK": ("en-US", "HK", "HK:en"), ".SA": ("pt-BR", "BR", "BR:pt"),
+    ".AX": ("en-AU", "AU", "AU:en"), ".TO": ("en-CA", "CA", "CA:en"),
+    ".PA": ("fr-FR", "FR", "FR:fr"),
 }
 
 NEWS_URL = "https://news.google.com/rss/search"
@@ -65,7 +77,7 @@ def _clean_symbol(value: str) -> str:
     return value.strip().upper()
 
 
-def lookup_company(query: str) -> list[dict[str, str]]:
+def lookup_company(query: str) -> list[dict[str, Any]]:
     """Find listed-company candidates without silently choosing an ambiguous name."""
     clean = query.strip()
     if not clean:
@@ -78,9 +90,12 @@ def lookup_company(query: str) -> list[dict[str, str]]:
                 "symbol": alias_symbol,
                 "name": info.get("longName") or info.get("shortName") or clean,
                 "exchange": info.get("fullExchangeName") or info.get("exchange") or "",
+                "sector": info.get("sector"),
+                "industry": info.get("industry"),
+                "_profile": info,
             }]
         except Exception:
-            return [{"symbol": alias_symbol, "name": clean, "exchange": ""}]
+            return [{"symbol": alias_symbol, "name": clean, "exchange": "", "sector": "", "industry": ""}]
 
     # A ticker-like query is explicit enough to validate directly.
     if re.fullmatch(r"[A-Za-z0-9^][A-Za-z0-9.^=_-]{0,19}", clean) and ("." in clean or any(ch.isdigit() for ch in clean) or len(clean) <= 5):
@@ -89,7 +104,8 @@ def lookup_company(query: str) -> list[dict[str, str]]:
             info = yf.Ticker(symbol).get_info()
             if info and (info.get("longName") or info.get("shortName") or info.get("quoteType") == "EQUITY"):
                 return [{"symbol": symbol, "name": info.get("longName") or info.get("shortName") or symbol,
-                         "exchange": info.get("fullExchangeName") or info.get("exchange") or ""}]
+                         "exchange": info.get("fullExchangeName") or info.get("exchange") or "",
+                         "sector": info.get("sector"), "industry": info.get("industry"), "_profile": info}]
         except Exception:
             return []
         return []
@@ -109,6 +125,8 @@ def lookup_company(query: str) -> list[dict[str, str]]:
                 "symbol": symbol,
                 "name": quote_item.get("longname") or quote_item.get("shortname") or symbol,
                 "exchange": quote_item.get("exchDisp") or quote_item.get("exchange") or "",
+                "sector": quote_item.get("sectorDisp") or quote_item.get("sector"),
+                "industry": quote_item.get("industryDisp") or quote_item.get("industry"),
             })
         return candidates
     except Exception as exc:
@@ -116,7 +134,22 @@ def lookup_company(query: str) -> list[dict[str, str]]:
         return []
 
 
-def select_company(query: str, input_fn=input, print_fn=print) -> dict[str, str] | None:
+def _enrich_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
+    """Fill company and industry metadata after the user selects a ticker."""
+    enriched = dict(candidate)
+    try:
+        info = candidate.get("_profile") or yf.Ticker(candidate["symbol"]).get_info()
+        enriched["_profile"] = info
+        enriched["name"] = info.get("longName") or info.get("shortName") or enriched["name"]
+        enriched["exchange"] = info.get("fullExchangeName") or info.get("exchange") or enriched.get("exchange", "")
+        enriched["sector"] = info.get("sector") or enriched.get("sector")
+        enriched["industry"] = info.get("industry") or enriched.get("industry")
+    except Exception:
+        pass
+    return enriched
+
+
+def select_company(query: str, input_fn=input, print_fn=print) -> dict[str, Any] | None:
     candidates = lookup_company(query)
     if not candidates:
         print_fn(f"No listed-company match found for {query!r}. Try its Yahoo Finance ticker, such as AAPL or TCS.NS.")
@@ -125,7 +158,7 @@ def select_company(query: str, input_fn=input, print_fn=print) -> dict[str, str]
         item = candidates[0]
         print_fn(f"Matched: {item['name']} ({item['symbol']}){(' - ' + item['exchange']) if item['exchange'] else ''}")
         confirm = input_fn("Use this company? (Y/n): ").strip().lower()
-        return item if confirm in ("", "y", "yes") else None
+        return _enrich_candidate(item) if confirm in ("", "y", "yes") else None
 
     print_fn("Select the correct listed company:")
     for index, item in enumerate(candidates, 1):
@@ -133,12 +166,48 @@ def select_company(query: str, input_fn=input, print_fn=print) -> dict[str, str]
     choice = input_fn(f"Enter 1-{len(candidates)} or press Enter to cancel: ").strip()
     if not choice.isdigit() or not 1 <= int(choice) <= len(candidates):
         return None
-    return candidates[int(choice) - 1]
+    return _enrich_candidate(candidates[int(choice) - 1])
 
 
-def suggest_peers(company: dict[str, str]) -> list[dict[str, str]]:
-    return [{"name": name, "symbol": symbol, "reason": reason}
-            for name, symbol, reason in PEER_SUGGESTIONS.get(company["symbol"], [])]
+def suggest_peers(company: dict[str, Any]) -> list[dict[str, str]]:
+    curated = [{"name": name, "symbol": symbol, "reason": reason, "basis": "curated product-market overlap"}
+               for name, symbol, reason in PEER_SUGGESTIONS.get(company["symbol"], [])]
+    if curated:
+        return curated
+
+    industry = company.get("industry")
+    if not industry:
+        return []
+    try:
+        search = yf.Search(str(industry), max_results=12, news_count=0, lists_count=0)
+        suggestions = []
+        seen = {company["symbol"].casefold()}
+        for item in getattr(search, "quotes", []) or []:
+            symbol = item.get("symbol")
+            candidate_industry = item.get("industryDisp") or item.get("industry")
+            if (not symbol or symbol.casefold() in seen or
+                    item.get("quoteType") not in (None, "EQUITY")):
+                continue
+            if candidate_industry and candidate_industry.casefold() != industry.casefold():
+                continue
+            seen.add(symbol.casefold())
+            reason = (
+                f"Yahoo Finance classifies it in {industry}; confirm its product-market overlap before comparing."
+                if candidate_industry else
+                f"Yahoo Finance surfaced it in a search for {industry}; verify the company and industry before comparing."
+            )
+            suggestions.append({
+                "name": item.get("longname") or item.get("shortname") or symbol,
+                "symbol": symbol,
+                "reason": reason,
+                "basis": "same-industry metadata" if candidate_industry else "industry search result to verify",
+            })
+            if len(suggestions) == 2:
+                break
+        return suggestions
+    except Exception as exc:
+        print(f"Could not find same-industry peer suggestions: {exc}")
+        return []
 
 
 def _benchmark_for(symbol: str) -> tuple[str, str]:
@@ -196,7 +265,7 @@ def _price_performance(series: pd.Series) -> dict[str, Any]:
 
 
 def _statement_value(frame: pd.DataFrame, labels: tuple[str, ...], column: Any) -> float | None:
-    if frame is None or frame.empty:
+    if frame is None or frame.empty or column not in frame.columns:
         return None
     normalized = {str(index).strip().lower(): index for index in frame.index}
     for label in labels:
@@ -214,11 +283,14 @@ def _statement_value(frame: pd.DataFrame, labels: tuple[str, ...], column: Any) 
 def _annual_financials(ticker: yf.Ticker) -> list[dict[str, Any]]:
     try:
         income = ticker.income_stmt
-        cash_flow = ticker.cashflow
     except Exception:
         return []
     if income is None or income.empty:
         return []
+    try:
+        cash_flow = ticker.cashflow
+    except Exception:
+        cash_flow = pd.DataFrame()
     periods = list(income.columns[:4])
     rows = []
     for period in periods:
@@ -233,11 +305,11 @@ def _annual_financials(ticker: yf.Ticker) -> list[dict[str, Any]]:
     return rows
 
 
-def fetch_company_snapshot(candidate: dict[str, str]) -> dict[str, Any]:
-    """Fetch fundamentals and five years of monthly, adjusted prices."""
+def fetch_company_snapshot(candidate: dict[str, Any]) -> dict[str, Any]:
+    """Fetch fundamentals and five years of daily, adjusted prices."""
     symbol = candidate["symbol"]
     ticker = yf.Ticker(symbol)
-    info = ticker.get_info()
+    info = candidate.get("_profile") or ticker.get_info()
     display_name = info.get("longName") or info.get("shortName") or candidate["name"]
     history = _series_from_history(ticker.history(period="5y", interval="1d", auto_adjust=True))
     if history.empty:
@@ -271,6 +343,7 @@ def fetch_company_snapshot(candidate: dict[str, str]) -> dict[str, Any]:
         },
         "operating_metrics": {
             "revenue": revenue,
+            "net_income": info.get("netIncomeToCommon") or info.get("netIncome"),
             "revenue_growth_percent": _as_percent(info.get("revenueGrowth")),
             "earnings_growth_percent": _as_percent(info.get("earningsGrowth")),
             "profit_margin_percent": _as_percent(info.get("profitMargins")),
@@ -299,7 +372,13 @@ def _as_percent(value: Any) -> float | None:
 def fetch_news(company: dict[str, str], limit: int = 15) -> dict[str, Any]:
     """Fetch dated Google News RSS headlines and attach a transparent text score."""
     query_name = company["name"]
-    params = {"q": f'"{query_name}" when:3m', "hl": "en-US", "gl": "US", "ceid": "US:en"}
+    locale = ("en-US", "US", "US:en")
+    for suffix, regional_locale in NEWS_LOCALES.items():
+        if company["symbol"].upper().endswith(suffix):
+            locale = regional_locale
+            break
+    language, region, edition = locale
+    params = {"q": f'"{query_name}" when:3m', "hl": language, "gl": region, "ceid": edition}
     response = requests.get(NEWS_URL, params=params, timeout=20, headers={"User-Agent": "CapitalCompass/1.0 research-bot"})
     response.raise_for_status()
     soup = BeautifulSoup(response.content, "xml")
@@ -323,6 +402,13 @@ def fetch_news(company: dict[str, str], limit: int = 15) -> dict[str, Any]:
             "news_tone": "positive" if polarity > 0.1 else "negative" if polarity < -0.1 else "neutral",
             "source": "Google News RSS",
         })
+    def published_timestamp(article: dict[str, Any]) -> float:
+        try:
+            return parsedate_to_datetime(article["published_at"]).timestamp()
+        except (KeyError, TypeError, ValueError, OverflowError):
+            return 0.0
+
+    articles.sort(key=published_timestamp, reverse=True)
     values = [item["news_tone_score"] for item in articles]
     mean_score = round(sum(values) / len(values), 3) if values else None
     return {
@@ -336,11 +422,11 @@ def fetch_news(company: dict[str, str], limit: int = 15) -> dict[str, Any]:
 
 
 EVENT_TERMS = {
-    "Legal / litigation": ("lawsuit", "sued", "court", "litigation", "class action", "settlement", "infringement"),
-    "Regulatory / investigation": ("investigation", "regulator", "antitrust", "probe", "fine", "sanction", "regulatory"),
+    "Legal / litigation": ("lawsuit", "sued", "court", "litigation", "class action", "settlement", "infringement", "fraud", "corruption", "bribery"),
+    "Regulatory / investigation": ("investigation", "regulator", "antitrust", "probe", "fine", "sanction", "regulatory", "sec probe", "ftc"),
     "Safety / recall": ("recall", "safety issue", "defect", "injury", "fatal", "nhtsa"),
     "Data / privacy": ("data breach", "privacy breach", "cyberattack", "ransomware", "data leak"),
-    "Public controversy": ("boycott", "controversy", "misconduct", "allegation", "accused", "protest"),
+    "Public controversy": ("scandal", "boycott", "controversy", "misconduct", "allegation", "alleged", "accused", "protest", "harassment", "labor abuse"),
 }
 
 
@@ -361,7 +447,7 @@ def identify_events(news: dict[str, Any]) -> list[dict[str, Any]]:
     return events
 
 
-def _candidate_from_peer_text(query: str, input_fn=input, print_fn=print) -> dict[str, str] | None:
+def _candidate_from_peer_text(query: str, input_fn=input, print_fn=print) -> dict[str, Any] | None:
     return select_company(query, input_fn=input_fn, print_fn=print_fn)
 
 
@@ -372,22 +458,27 @@ class CompanyResearchPipeline:
         self.output_root = output_root
         self.report_root = report_root
 
-    def run(self, primary: dict[str, str], peer: dict[str, str] | None = None) -> dict[str, Any]:
+    def run(self, primary: dict[str, Any], peer: dict[str, Any] | None = None) -> dict[str, Any]:
         import json
         import os
         import re as _re
 
         from agents.capital_compass_report import ReportWriterAgent
 
+        if peer and peer["symbol"].casefold() == primary["symbol"].casefold():
+            raise ValueError("The competitor must be a different listed company.")
         started = _utc_now()
         print(f"\n=== Capital Compass: {primary['name']} ({primary['symbol']}) ===")
         print("Fetching company fundamentals and historical prices...")
         companies = []
+        data_warnings = []
         for candidate in [primary] + ([peer] if peer else []):
             try:
                 companies.append(fetch_company_snapshot(candidate))
             except Exception as exc:
-                print(f"Could not fetch financial profile for {candidate['symbol']}: {exc}")
+                warning = f"Could not fetch financial profile for {candidate['symbol']}: {exc}"
+                data_warnings.append(warning)
+                print(warning)
                 if candidate["symbol"] == primary["symbol"]:
                     raise
                 peer = None
@@ -400,20 +491,27 @@ class CompanyResearchPipeline:
             except Exception as exc:
                 news = {"articles": [], "article_count": 0, "average_news_tone_score": None,
                         "error": str(exc), "source": {"name": "Google News RSS", "retrieved_at": _utc_now().isoformat()}}
-                print(f"News unavailable for {company['name']}: {exc}")
+                warning = f"News unavailable for {company['name']}: {exc}"
+                data_warnings.append(warning)
+                print(warning)
             news_by_symbol[company["symbol"]] = news
             events_by_symbol[company["symbol"]] = identify_events(news)
 
         peer_suggestion = suggest_peers(primary)
         result = {
             "product": "Capital Compass",
-            "run_id": started.strftime("%Y%m%dT%H%M%SZ"),
+            "run_id": started.strftime("%Y%m%dT%H%M%S%fZ"),
             "generated_at": started.isoformat(),
             "coverage_note": "Public-company coverage depends on Yahoo Finance data availability. Headline tone is a text heuristic, not a measure of all public opinion.",
             "companies": companies,
             "news_by_symbol": news_by_symbol,
             "recent_events_by_symbol": events_by_symbol,
+            "data_warnings": data_warnings,
             "peer_suggestion": peer_suggestion[0] if peer_suggestion else None,
+            "peer_comparison_note": (
+                next((item["reason"] for item in peer_suggestion if peer and item["symbol"] == peer["symbol"]), None)
+                or ("This peer was selected by the user; compare industry, geography, and business mix before drawing conclusions." if peer else None)
+            ),
             "methodology": {
                 "price_returns": "Calculated from daily auto-adjusted closes using the closest observation on or before the period start.",
                 "annualized_volatility": "Standard deviation of daily adjusted-price returns multiplied by square root of 252 trading days.",
@@ -433,12 +531,22 @@ class CompanyResearchPipeline:
         os.makedirs(self.report_root, exist_ok=True)
         pdf_path = os.path.join(self.report_root, f"{slug}_{result['run_id']}_capital_compass.pdf")
         ReportWriterAgent(report_data=result, output_path=pdf_path).generate_report()
+        print("\nQuick comparison:")
+        for company in companies:
+            year_return = company.get("share_performance", {}).get("returns_percent", {}).get("1 year")
+            return_text = f"{year_return:+.2f}%" if year_return is not None else "not available"
+            news = news_by_symbol.get(company["symbol"], {})
+            tone = news.get("average_news_tone_score")
+            tone_text = f"{tone:+.3f}" if tone is not None else "not available"
+            flags = len(events_by_symbol.get(company["symbol"], []))
+            print(f"- {company['name']} ({company['symbol']}): 1-year return {return_text}; "
+                  f"news tone {tone_text}; event headlines to review {flags}")
         print(f"Saved evidence data: {data_path}")
         print(f"Saved report: {pdf_path}")
         return result
 
 
-def choose_peer(primary: dict[str, str], input_fn=input, print_fn=print) -> dict[str, str] | None:
+def choose_peer(primary: dict[str, Any], input_fn=input, print_fn=print) -> dict[str, Any] | None:
     suggestions = suggest_peers(primary)
     if suggestions:
         print_fn("\nSuggested competitor:")
@@ -449,7 +557,8 @@ def choose_peer(primary: dict[str, str], input_fn=input, print_fn=print) -> dict
     if answer.casefold() == "skip":
         return None
     if not answer and suggestions:
-        return {"name": suggestions[0]["name"], "symbol": suggestions[0]["symbol"]}
+        return {"name": suggestions[0]["name"], "symbol": suggestions[0]["symbol"],
+                "exchange": "", "industry": "", "sector": ""}
     if not answer:
         return None
     return _candidate_from_peer_text(answer, input_fn, print_fn)

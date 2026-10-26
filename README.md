@@ -58,7 +58,7 @@ The JSON file contains the figures, news items, event flags, source URLs, retrie
 
 ## Suggested competitor coverage
 
-The app includes initial suggestions for pairs such as Apple/Samsung, Tesla/BYD, NVIDIA/AMD, Microsoft/Alphabet, Toyota/Volkswagen, and TCS/Infosys. For other companies, enter a peer of your choice. An automatic same-industry suggestion is not always a true direct competitor, so the app keeps the user in control.
+The app includes initial suggestions for pairs such as Apple/Samsung, Tesla/BYD, NVIDIA/AMD, Microsoft/Alphabet, Toyota/Volkswagen, and TCS/Infosys. For other companies, it searches Yahoo Finance for same-industry candidates when industry data is available; otherwise, enter a peer manually. Search matches are suggestions, not proof of direct competition, so the app explains their basis and keeps the user in control.
 
 ## Project structure
 
